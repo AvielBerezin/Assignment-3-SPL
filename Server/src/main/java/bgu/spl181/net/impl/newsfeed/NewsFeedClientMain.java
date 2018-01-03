@@ -23,11 +23,13 @@ public class NewsFeedClientMain {
 
             c.receive(); //ok
 
+
             c.send(new PublishNewsCommand(
                     "headlines",
                     "new SPL assignment is out soon!!"));
 
             c.receive(); //ok
+
 
             c.send(new PublishNewsCommand(
                     "headlines",
