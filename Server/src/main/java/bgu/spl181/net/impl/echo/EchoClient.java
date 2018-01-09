@@ -1,6 +1,10 @@
 package bgu.spl181.net.impl.echo;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.Socket;
 
 public class EchoClient {
@@ -16,46 +20,19 @@ public class EchoClient {
             System.exit(1);
         }
 
-        client(args[0], 7777, args[1]);
-    }
-
-    private static void client(String serverHost, int serverPort, String msg) throws IOException {
         //BufferedReader and BufferedWriter automatically using UTF-8 encoding
-        try (
-                Socket sock = new Socket(serverHost, serverPort);
-                BufferedReader in = getBufferedReader(sock);
-                BufferedWriter out = getBufferedWriter(sock)
-        ) {
+        try (Socket sock = new Socket(args[0], 7777);
+                BufferedReader in = new BufferedReader(new InputStreamReader(sock.getInputStream()));
+                BufferedWriter out = new BufferedWriter(new OutputStreamWriter(sock.getOutputStream()))) {
 
-            log("sending message to server");
-            sendMsg(out, msg);
+            System.out.println("sending message to server");
+            out.write(args[1]);
+            out.newLine();
+            out.flush();
 
-            log("awaiting response");
-            String response = receiveResponse(in);
-            log("message from server: " + response);
+            System.out.println("awaiting response");
+            String line = in.readLine();
+            System.out.println("message from server: " + line);
         }
     }
-
-    private static void sendMsg(BufferedWriter out, String msg) throws IOException {
-        out.write(msg);
-        out.newLine();
-        out.flush();
-    }
-
-    private static String receiveResponse(BufferedReader in) throws IOException {
-        return in.readLine();
-    }
-
-    private static void log(String msg) {
-        System.out.println(msg);
-    }
-
-    private static BufferedReader getBufferedReader(Socket socket) throws IOException {
-        return new BufferedReader(new InputStreamReader(socket.getInputStream()));
-    }
-
-    private static BufferedWriter getBufferedWriter(Socket socket) throws IOException {
-        return new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-    }
-
 }

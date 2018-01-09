@@ -8,9 +8,8 @@ package bgu.spl181.net.srv;
 import java.io.Closeable;
 
 /**
- *
- * @author bennyl
+ * The ConnectionHandler interface for Message of type T
  */
-public interface ConnectionHandler<T> extends Closeable{
-
+public interface ConnectionHandler<T> extends Closeable {
+    
 }

@@ -12,7 +12,7 @@ import java.io.IOException;
  *
  * @author bennyl
  */
-public interface ConnectionHandler<T> extends Closeable{
+public interface ConnectionHandler<T> extends Closeable {
 
     void send(T msg) ;
 
