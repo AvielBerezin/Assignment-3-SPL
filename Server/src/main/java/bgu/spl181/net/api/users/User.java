@@ -4,22 +4,27 @@ import bgu.spl181.net.data.JsonParsable;
 import bgu.spl181.net.data.JsonParser;
 
 import java.util.*;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
 /**
  * Created by avielber on 1/9/18.
  *
  * A class representing a user
  */
-public abstract class User implements JsonParsable {
+public class User implements JsonParsable {
+    public static final String NORMAL = "normal";
+    public static final String ADMIN = "admin";
 
-    public User(String username, String password, String country, List<Movie> movies, int balance) {
+    public User(String username, String password, String country, List<Movie> movies, int balance, String type) {
         this.username = username;
         this.password = password;
         this.country = country;
         this.movies = movies;
         this.balance = balance;
+
+        if (type != NORMAL & type != ADMIN) {
+            type = NORMAL;
+        }
+        this.type = type;
     }
 
     private final String username;
@@ -27,6 +32,7 @@ public abstract class User implements JsonParsable {
     private final String country;
     private final List<Movie> movies;
     private final int balance;
+    private final String type;
 
     public String getUsername() {
         return username;
@@ -43,6 +49,9 @@ public abstract class User implements JsonParsable {
     public int getBalance() {
         return balance;
     }
+    public String getType() {
+        return type;
+    }
 
     @Override
     public String toJsonString() {
@@ -56,7 +65,4 @@ public abstract class User implements JsonParsable {
                 parser.toJsonString("balance") + ": "  + parser.toJsonString(getBalance()) +
                 "}";
     }
-
-
-    protected abstract String getType();
 }
