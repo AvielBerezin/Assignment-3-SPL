@@ -2,6 +2,7 @@ package bgu.spl181.net.api.protocols;
 
 import bgu.spl181.net.api.bidi.BidiMessagingProtocol;
 import bgu.spl181.net.api.bidi.Connections;
+import bgu.spl181.net.data.DataBase;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -106,6 +107,12 @@ import java.util.stream.Stream;
 public abstract class UserServeiceTextBasedProtocol implements BidiMessagingProtocol<String> {
     protected Connections<String> connections;
     protected int connectionId;
+
+    protected DataBase dataBase;
+
+    public UserServeiceTextBasedProtocol(DataBase dataBase) {
+        this.dataBase = dataBase;
+    }
 
     // -------------------- client commands identifiers -------------------
     public static final String REGISTER_COMMAND_IDENTIFIER = "REGISTER";

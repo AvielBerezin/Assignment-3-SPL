@@ -28,7 +28,6 @@ public class Movie implements JsonParsable {
         this.totalAmount = totalAmount;
     }
 
-//    public Movie(DataBase dataBase, int id) {}
 
     public int getId() {
         return id;
@@ -67,6 +66,16 @@ public class Movie implements JsonParsable {
                 "}";
     }
 
-//    public pushIntoDatabase(DataBase dataBase) {}
+    @Override
+    public boolean equals(Object o) {
+        if (o == null) {
+            return false;
+        }
 
+        if (! (o instanceof Movie)) {
+            return false;
+        }
+
+        return ((Movie)o).getId() == getId();
+    }
 }

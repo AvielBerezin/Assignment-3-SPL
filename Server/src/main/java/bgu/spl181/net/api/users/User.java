@@ -30,6 +30,13 @@ public class User implements JsonParsable {
     private final String username;
     private final String password;
     private final String country;
+    /**
+     *  might not be updated throughout the run of the server because movies are copied and being changed.
+     *  but its ok because it is only used to:
+     *   - print the id and name of the movies which are not changing.
+     *   - check if user has already rent a movie when requesting a rent of that movie.
+     *     which happens comparing id's/names and not the entire object.
+     */
     private final List<Movie> movies;
     private final int balance;
     private final String type;
