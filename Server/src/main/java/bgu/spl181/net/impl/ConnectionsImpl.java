@@ -37,7 +37,7 @@ public class ConnectionsImpl<T> implements Connections<T> {
         }
     }
 
-    public void connect(int connectionId, ConnectionHandler<T> connectionHandler) {
+    public void addConnection(int connectionId, ConnectionHandler<T> connectionHandler) {
         connections.put(connectionId, connectionHandler);
     }
 

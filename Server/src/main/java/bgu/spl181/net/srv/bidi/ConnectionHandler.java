@@ -9,7 +9,7 @@ import java.io.Closeable;
 import java.io.IOException;
 
 /**
- *
+ * The ConnectionHandler interface for Message of type T
  * @author bennyl
  */
 public interface ConnectionHandler<T> extends Closeable {
