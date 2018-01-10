@@ -11,7 +11,8 @@ import java.net.Socket;
 import java.util.LinkedList;
 import java.util.Queue;
 
-public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler<T> {
+
+public class BlockingConnectionHandler<T> implements Runnable, bgu.spl181.net.srv.bidi.ConnectionHandler<T> {
 
     private final BidiMessagingProtocol<T> protocol;
     private final MessageEncoderDecoder<T> encdec;
