@@ -57,7 +57,7 @@ public class MovieRentalServeiceProtocol extends UserServeiceTextBasedProtocol {
             return false;
         }
 
-        user = ((DataBase) dataBase).getUser(username, password);
+        user = dataBase.users.get(User.equalsByUsername(username).and(User.equalsByPassword(password)));
         if (!userIsLoggedIn()) {
             return false;
         }
@@ -98,20 +98,19 @@ public class MovieRentalServeiceProtocol extends UserServeiceTextBasedProtocol {
             return false;
         }
 
-        if (divideBySpaces[3] != "country=") {
+        if (divideBySpaces[3].equals("country=")) {
             return false;
         }
 
         String username = divideBySpaces[1];
         String password = divideBySpaces[2];
 
-        if (((DataBase) dataBase).userExists(username)) {
+        if (dataBase.users.exists(User.equalsByUsername(username))) {
             return false;
         }
 
         User registeredUser = new User(username, password, country, new LinkedList<>(), 0, User.NORMAL);
-        ((DataBase) dataBase).addUser(registeredUser);
-        return true;
+        return dataBase.users.add(registeredUser) != null;
     }
 
     /**
@@ -214,7 +213,7 @@ public class MovieRentalServeiceProtocol extends UserServeiceTextBasedProtocol {
         }
         int price = getPriceFrom_price_(_price_);
 
-        Movie movie = ((DataBase)dataBase).getMovie(movieName);
+        Movie movie = dataBase.movies.get(Movie.equalsByName(movieName));
         if (movie == null) {
             reportError("request addmovie failed");
             return;
@@ -231,7 +230,7 @@ public class MovieRentalServeiceProtocol extends UserServeiceTextBasedProtocol {
                 movie.getBannedCountries(),
                 movie.getAvailableAmount(), movie.getTotalAmount());
 
-        ((DataBase)dataBase).updateMovie(movie);
+        dataBase.movies.update(movie, movie.equalsById());
         acknowledge("addmovie \"" + movieName + "\" success");
         broadcast("movie \"" + movieName + "\" " + movie.getAvailableAmount() + " " + movie.getPrice());
     }
@@ -293,13 +292,13 @@ public class MovieRentalServeiceProtocol extends UserServeiceTextBasedProtocol {
             return;
         }
 
-        if (!((DataBase)dataBase).movieExists(movieName)) {
+        if (!dataBase.movies.exists(Movie.equalsByName(movieName))) {
             reportError("request remmovie failed");
             return;
         }
 
 
-        ((DataBase)dataBase).deleteMovie(movieName);
+        dataBase.movies.delete(Movie.equalsByName(movieName));
         acknowledge("remmovie \"" + movieName + "\" success");
         broadcast("movie \"" + movieName + "\" removed");
     }
@@ -341,7 +340,7 @@ public class MovieRentalServeiceProtocol extends UserServeiceTextBasedProtocol {
         }
         List<String> bannedCountries = getBannedCountriesFromRequestAddmovieSplittedString(divideByQuotationMarks);
 
-        if (((DataBase)dataBase).movieExists(movieName)) {
+        if (dataBase.movies.exists(Movie.equalsByName(movieName))) {
             reportError("request addmovie failed");
             return;
         }
@@ -357,10 +356,14 @@ public class MovieRentalServeiceProtocol extends UserServeiceTextBasedProtocol {
         }
 
 
-        Movie movie = new Movie(((DataBase)dataBase).highestMovieId() + 1,
+        Movie movie = new Movie(dataBase.movies.newId(),
                 movieName, price, bannedCountries, amount, amount);
 
-        ((DataBase)dataBase).addMovie(movie);
+        if (dataBase.movies.add(movie) == null) {
+            reportError("request addmovie failed");
+            return;
+        }
+
         acknowledge("addmovie \"" + movieName + "\" success");
         broadcast("movie \"" + movieName + "\" " + movie.getAvailableAmount() + " " + movie.getPrice());
     }
@@ -450,7 +453,7 @@ public class MovieRentalServeiceProtocol extends UserServeiceTextBasedProtocol {
         String[] dividedByQuotationMarks = message.split("\"");
         String movieName = dividedByQuotationMarks[1];
 
-        Movie movie = ((DataBase) dataBase).getMovie(movieName);
+        Movie movie = dataBase.movies.get(Movie.equalsByName(movieName));
 
 
         if (movie == null) {
@@ -477,8 +480,8 @@ public class MovieRentalServeiceProtocol extends UserServeiceTextBasedProtocol {
                 movie.getAvailableAmount() + 1, movie.getTotalAmount());
 
 
-        ((DataBase)dataBase).updateUser(user);
-        ((DataBase)dataBase).updateMovie(movie);
+        dataBase.users.update(user, user.equalsByUsername());
+        dataBase.movies.update(movie, movie.equalsById());
 
         acknowledge("return \"" + movieName + "\" success");
         broadcast("movie \"" + movieName + "\" " + movie.getAvailableAmount() + " " + movie.getPrice());
@@ -506,7 +509,7 @@ public class MovieRentalServeiceProtocol extends UserServeiceTextBasedProtocol {
         String[] dividedByQuotationMarks = message.split("\"");
         String movieName = dividedByQuotationMarks[1];
 
-        Movie movie = ((DataBase) dataBase).getMovie(movieName);
+        Movie movie = dataBase.movies.get(Movie.equalsByName(movieName));
 
         if (movie == null) {
             reportError("request rent failed");
@@ -547,8 +550,8 @@ public class MovieRentalServeiceProtocol extends UserServeiceTextBasedProtocol {
                 user.getBalance() - movie.getPrice(),
                 user.getType());
 
-        ((DataBase)dataBase).updateMovie(movie);
-        ((DataBase)dataBase).updateUser(user);
+        dataBase.movies.update(movie, movie.equalsById());
+        dataBase.users.update(user, user.equalsByUsername());
 
         acknowledge("rent \"" + movieName + "\" success");
         broadcast("movie \"" + movieName + "\" " + movie.getAvailableAmount() + " " + movie.getPrice());
@@ -591,7 +594,7 @@ public class MovieRentalServeiceProtocol extends UserServeiceTextBasedProtocol {
             return;
         }
 
-        List<String> moviesNames = ((DataBase) dataBase).getAllMoviesNames();
+        List<String> moviesNames = dataBase.movies.getAllNames();
         acknowledge("info" + acknowledgeTextForListOfReachStrings(moviesNames));
     }
 
@@ -617,7 +620,7 @@ public class MovieRentalServeiceProtocol extends UserServeiceTextBasedProtocol {
 
         String movieName = divideByQuotationMarks[1];
 
-        Movie movie = ((DataBase) dataBase).getMovie(movieName);
+        Movie movie = dataBase.movies.get(Movie.equalsByName(movieName));
 
         if (movie == null) {
             reportError("request info failed");

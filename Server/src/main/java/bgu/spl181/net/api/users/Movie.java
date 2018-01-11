@@ -4,6 +4,7 @@ import bgu.spl181.net.data.JsonParsable;
 import bgu.spl181.net.data.JsonParser;
 
 import java.util.List;
+import java.util.function.Predicate;
 
 /**
  * Created by avielber on 1/9/18.
@@ -51,6 +52,20 @@ public class Movie implements JsonParsable {
 
     public int getTotalAmount() {
         return totalAmount;
+    }
+
+    public Predicate<Movie> equalsById() {
+        return movie -> movie.getId() == getId();
+    }
+    public Predicate<Movie> equalsByName() {
+        return movie -> movie.getName() == getName();
+    }
+
+    public static Predicate<Movie> equalsById(int id) {
+        return movie -> movie.getId() == id;
+    }
+    public static Predicate<Movie> equalsByName(String name) {
+        return movie -> movie.getName() == name;
     }
 
     @Override

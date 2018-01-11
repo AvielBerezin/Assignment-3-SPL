@@ -4,6 +4,7 @@ import bgu.spl181.net.data.JsonParsable;
 import bgu.spl181.net.data.JsonParser;
 
 import java.util.*;
+import java.util.function.Predicate;
 
 /**
  * Created by avielber on 1/9/18.
@@ -58,6 +59,20 @@ public class User implements JsonParsable {
     }
     public String getType() {
         return type;
+    }
+
+    public Predicate<User> equalsByUsername() {
+        return User.equalsByUsername(getUsername());
+    }
+    public Predicate<User> equalsByPassword() {
+        return User.equalsByPassword(getPassword());
+    }
+
+    public static Predicate<User> equalsByUsername(String username) {
+        return user -> user.getUsername().equals(username);
+    }
+    public static Predicate<User> equalsByPassword(String password) {
+        return user -> user.getPassword().equals(password);
     }
 
     @Override
