@@ -17,6 +17,7 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
     private BufferedInputStream in;
     private BufferedOutputStream out;
     private volatile boolean connected = true;
+    private boolean availableForBreadCast = false;
 
     public BlockingConnectionHandler(Socket sock, MessageEncoderDecoder<T> reader, BidiMessagingProtocol<T> protocol) {
         this.sock = sock;
@@ -42,7 +43,6 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
         } catch (IOException ex) {
             ex.printStackTrace();
         }
-
     }
 
     @Override
@@ -51,12 +51,26 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
         sock.close();
     }
 
-    public void send(T msg){
+    @Override
+    public void send(T msg) {
         try {
             out.write(encdec.encode(msg));
             out.flush();
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+    }
+
+    @Override
+    public boolean isAvailableForBroadcast() {
+        return availableForBreadCast;
+    }
+    @Override
+    public void enableBroadcast() {
+        availableForBreadCast = true;
+    }
+    @Override
+    public void disableBroadcast() {
+        availableForBreadCast = false;
     }
 }

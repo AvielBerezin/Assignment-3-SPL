@@ -27,7 +27,7 @@ public abstract class BaseServer<T> implements Server<T> {
         this.protocolFactory = protocolFactory;
         this.encdecFactory = encdecFactory;
         this.sock = null;
-        this.connections = null;
+        this.connections = new ConnectionsImpl<>();
         this.id = 0;
     }
 
@@ -37,28 +37,29 @@ public abstract class BaseServer<T> implements Server<T> {
         try (ServerSocket serverSock = new ServerSocket(port)) {
             System.out.println("Server started");
 
-            this.sock = serverSock; //just to be able to close
+            this.sock = serverSock; // just to be able to close
 
             while (!Thread.currentThread().isInterrupted()) {
 
                 Socket clientSock = serverSock.accept();
 
                 int tmpId = getId();
-                BidiMessagingProtocol<T> tmp = protocolFactory.get();
-                tmp.start(tmpId,connections);
+                BidiMessagingProtocol<T> protocol = protocolFactory.get();
+                protocol.start(tmpId, connections);
 
 
                 BlockingConnectionHandler<T> handler = new BlockingConnectionHandler<>(
                         clientSock,
                         encdecFactory.get(),
-                        tmp);
+                        protocol);
 
 
-                connections.addConnection(tmpId,handler);
+                connections.addConnection(tmpId, handler);
 
                 execute(handler);
             }
         } catch (IOException ex) {
+            ex.printStackTrace();
         }
 
         System.out.println("server closed!!!");

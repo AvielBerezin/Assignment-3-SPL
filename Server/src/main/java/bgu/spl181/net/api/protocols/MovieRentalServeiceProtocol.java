@@ -1,5 +1,6 @@
 package bgu.spl181.net.api.protocols;
 
+import bgu.spl181.net.api.bidi.Connections;
 import bgu.spl181.net.api.users.Movie;
 import bgu.spl181.net.api.users.User;
 import bgu.spl181.net.data.DataBase;
@@ -16,7 +17,6 @@ import java.util.function.Consumer;
 public class MovieRentalServeiceProtocol extends UserServeiceTextBasedProtocol {
 
     private User user = null;
-    private boolean successfulLoginPerformed = false; // TODO change this logic to checking whether there is the same user in the system whose logged in
 
     public MovieRentalServeiceProtocol(DataBase dataBase) {
         super(dataBase);
@@ -26,6 +26,7 @@ public class MovieRentalServeiceProtocol extends UserServeiceTextBasedProtocol {
         return user != null;
     }
     private void logUserOut() {
+        dataBase.users.free(user);
         user = null;
     }
 
@@ -53,16 +54,17 @@ public class MovieRentalServeiceProtocol extends UserServeiceTextBasedProtocol {
         String username = dividedBySpaces[1];
         String password = dividedBySpaces[2];
 
-        if (successfulLoginPerformed | userIsLoggedIn()) {
+        if (userIsLoggedIn()) {
             return false;
         }
 
-        user = dataBase.users.get(User.equalsByUsername(username).and(User.equalsByPassword(password)));
-        if (!userIsLoggedIn()) {
+        if (!dataBase.users.isFree(user = dataBase.users.get(User.equalsByUsername(username).and(User.equalsByPassword(password))))) {
             return false;
         }
 
-        successfulLoginPerformed = true;
+
+        dataBase.users.takeHostage(user);
+        connections.enableBroadcast(connectionId);
         return true;
     }
 
@@ -121,6 +123,7 @@ public class MovieRentalServeiceProtocol extends UserServeiceTextBasedProtocol {
     @Override
     protected void signout(String message) {
         if (trySignout(message)) {
+            connections.disableBroadcast(connectionId);
             acknowledge("signout succeeded");
         }
         else {

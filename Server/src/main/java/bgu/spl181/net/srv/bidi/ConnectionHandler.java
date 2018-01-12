@@ -16,4 +16,7 @@ public interface ConnectionHandler<T> extends Closeable {
 
     void send(T msg) ;
 
+    boolean isAvailableForBroadcast();
+    void enableBroadcast();
+    void disableBroadcast();
 }

@@ -3,6 +3,7 @@ package bgu.spl181.net.api.protocols;
 import bgu.spl181.net.api.bidi.BidiMessagingProtocol;
 import bgu.spl181.net.api.bidi.Connections;
 import bgu.spl181.net.data.DataBase;
+import bgu.spl181.net.impl.ConnectionsImpl;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -105,7 +106,7 @@ import java.util.stream.Stream;
  * -------------------------------------------------------------------------------------------
  */
 public abstract class UserServeiceTextBasedProtocol implements BidiMessagingProtocol<String> {
-    protected Connections<String> connections;
+    protected ConnectionsImpl<String> connections;
     protected int connectionId;
 
     protected DataBase dataBase;
@@ -127,7 +128,7 @@ public abstract class UserServeiceTextBasedProtocol implements BidiMessagingProt
 
     @Override
     public void start(int connectionId, Connections<String> connections) {
-        this.connections = connections;
+        this.connections = (ConnectionsImpl<String>) connections;
         this.connectionId = connectionId;
     }
 

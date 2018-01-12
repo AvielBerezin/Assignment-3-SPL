@@ -16,7 +16,7 @@ public class ConnectionsImpl<T> implements Connections<T> {
     private Map<Integer, ConnectionHandler<T>> connections;
 
     public ConnectionsImpl() {
-        connections = new HashMap<Integer, ConnectionHandler<T>>();
+        connections = new HashMap<>();
     }
 
     public boolean send(int connectionId, T msg) {
@@ -25,7 +25,9 @@ public class ConnectionsImpl<T> implements Connections<T> {
     }
 
     public void broadcast(T msg) {
-        connections.values().forEach(conn->conn.send(msg));
+        connections.values().stream()
+                .filter(ConnectionHandler::isAvailableForBroadcast)
+                .forEach(conn->conn.send(msg));
     }
 
     public void disconnect(int connectionId) {
@@ -42,5 +44,10 @@ public class ConnectionsImpl<T> implements Connections<T> {
     }
 
 
-
+    public void enableBroadcast(int connectionId) {
+        connections.get(connectionId).enableBroadcast();
+    }
+    public void disableBroadcast(int connectionId) {
+        connections.get(connectionId).disableBroadcast();
+    }
 }

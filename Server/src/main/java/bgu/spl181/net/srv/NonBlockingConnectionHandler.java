@@ -20,6 +20,8 @@ public class NonBlockingConnectionHandler<T> implements ConnectionHandler<T> {
     private final MessageEncoderDecoder<T> encdec;
     private final Queue<ByteBuffer> writeQueue = new ConcurrentLinkedQueue<>();
     private final SocketChannel chan;
+    private boolean availableForBroadcast = false;
+
     private final Reactor reactor;
 
     public NonBlockingConnectionHandler(
@@ -120,5 +122,17 @@ public class NonBlockingConnectionHandler<T> implements ConnectionHandler<T> {
     public void send(T msg){
         writeQueue.add(ByteBuffer.wrap(encdec.encode(msg)));
         reactor.updateInterestedOps(chan, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+    }
+    @Override
+    public boolean isAvailableForBroadcast() {
+        return availableForBroadcast;
+    }
+    @Override
+    public void enableBroadcast() {
+        availableForBroadcast = true;
+    }
+    @Override
+    public void disableBroadcast() {
+        availableForBroadcast = false;
     }
 }
