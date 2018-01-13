@@ -104,14 +104,17 @@ import java.util.stream.Stream;
  * In case of successful request an ACK command will be sent. Specific ACK messages are
  * listed on the service specifications.
  * -------------------------------------------------------------------------------------------
+ *
+ * User service text based protocol
  */
-public abstract class UserServeiceTextBasedProtocol implements BidiMessagingProtocol<String> {
+public abstract class USTBP implements BidiMessagingProtocol<String> {
     protected ConnectionsImpl<String> connections;
     protected int connectionId;
+    protected boolean shouldTerminate = false;
 
     protected DataBase dataBase;
 
-    public UserServeiceTextBasedProtocol(DataBase dataBase) {
+    public USTBP(DataBase dataBase) {
         this.dataBase = dataBase;
     }
 
@@ -134,6 +137,7 @@ public abstract class UserServeiceTextBasedProtocol implements BidiMessagingProt
 
     @Override
     public void process(String message) {
+        message = message.trim();
         String commandType = getIdentifier(message);
 
         Map<String, Consumer<String>> actions = new HashMap<>();
@@ -152,13 +156,7 @@ public abstract class UserServeiceTextBasedProtocol implements BidiMessagingProt
     }
 
     private String getIdentifier(String message) {
-        String[] dividedByEndLines = message.split("\n");
-
-        if (dividedByEndLines.length == 0) {
-            return null;
-        }
-
-        String[] dividedBySpaces = dividedByEndLines[0].split(" ");
+        String[] dividedBySpaces = message.split(" ");
 
         if (dividedBySpaces.length == 0) {
             return null;
@@ -184,6 +182,6 @@ public abstract class UserServeiceTextBasedProtocol implements BidiMessagingProt
 
     @Override
     public boolean shouldTerminate() {
-        return false;
+        return shouldTerminate;
     }
 }

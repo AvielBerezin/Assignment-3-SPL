@@ -1,7 +1,9 @@
 package bgu.spl181.net.data;
 
+import bgu.spl181.net.data.IdataObjects.Container;
+import bgu.spl181.net.data.IdataObjects.DataObject;
+import bgu.spl181.net.data.users.*;
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -15,12 +17,12 @@ import java.util.stream.Collectors;
 /**
  * Created by avielber on 1/11/18.
  */
-public abstract class AbstractDataBase<T> {
+public abstract class AbstractDataBase<T extends DataObject> {
     private List<T> _all = null;
 
     protected List<T> getAll() {
         if (_all == null) {
-            readAll();
+            _all = readAll();
         }
 
         return _all;
@@ -31,38 +33,9 @@ public abstract class AbstractDataBase<T> {
         return _all;
     }
 
-    protected List<T> readAll() {
-        Gson gson = new Gson();
+    protected abstract List<T> readAll();
 
-        try (FileReader fileReader = new FileReader(getJsonPath())) {
-            Map<String, List<T>> map = gson.fromJson(fileReader, new TypeToken<Map<String, List<T>>>() {}.getType());
-
-            _all = map.get(getDataSpecification());
-
-            return _all;
-        }
-        catch (IOException ioException) {
-            ioException.printStackTrace();
-        }
-        return null;
-    }
-
-    protected List<T> writeAll() {
-        Gson gson = new Gson();
-
-        try (FileWriter fileWriter = new FileWriter(getJsonPath())) {
-            Map<String, List<T>> map = new HashMap<>();
-            map.put(getDataSpecification(), getAll());
-            gson.toJson(map, fileWriter);
-
-            return _all;
-        }
-        catch (IOException ioException) {
-            ioException.printStackTrace();
-        }
-
-        return null;
-    }
+    protected abstract List<T> writeAll();
 
     /**
      * The method checks whether a dataObject exists in the data base,
@@ -201,8 +174,5 @@ public abstract class AbstractDataBase<T> {
 
 
     protected abstract String getJsonPath();
-
-    protected abstract String getDataSpecification();
-
 
 }

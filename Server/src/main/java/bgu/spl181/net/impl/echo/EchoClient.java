@@ -1,38 +1,70 @@
 package bgu.spl181.net.impl.echo;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.net.Socket;
 
 public class EchoClient {
 
     public static void main(String[] args) throws IOException {
-
         if (args.length == 0) {
-            args = new String[]{"localhost", "hello"};
+            args = new String[]{"localhost", "7777"};
         }
 
-        if (args.length < 2) {
-            System.out.println("you must supply two arguments: host, message");
+        if (args.length != 2) {
+            System.out.println("you must supply two arguments: host, port");
             System.exit(1);
         }
 
-        //BufferedReader and BufferedWriter automatically using UTF-8 encoding
-        try (Socket sock = new Socket(args[0], 7777);
-                BufferedReader in = new BufferedReader(new InputStreamReader(sock.getInputStream()));
-                BufferedWriter out = new BufferedWriter(new OutputStreamWriter(sock.getOutputStream()))) {
+        final String hostAddress = args[0];
+        final Integer port = Integer.parseInt(args[1]);
+        final Socket socket = new Socket(hostAddress, port);
 
-            System.out.println("sending message to server");
-            out.write(args[1]);
-            out.newLine();
-            out.flush();
+        final Thread outputToServer = new Thread(() -> {
+            try (BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()))) {
+                while (!Thread.currentThread().isInterrupted()) {
+                    String keyboardInput = readLine(System.in);
+                    System.out.println(">" + keyboardInput + ">");
+                    out.write(keyboardInput);
+                    out.newLine();
+                    out.flush();
+                }
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+                Thread.currentThread().interrupt();
+            }
+        });
 
-            System.out.println("awaiting response");
-            String line = in.readLine();
-            System.out.println("message from server: " + line);
+
+        final Thread inputFromServer = new Thread(() -> {
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+                while (!Thread.currentThread().isInterrupted()) {
+                    String line = in.readLine();
+                    System.out.println("<" + line + "<");
+
+                    if (line.equals("ACK signout success")) {
+                        outputToServer.interrupt();
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+                Thread.currentThread().interrupt();
+            }
+        });
+
+        outputToServer.start();
+        inputFromServer.start();
+    }
+
+    private static String readLine(InputStream in) {
+        try {
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(in));
+            return bufferedReader.readLine();
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+            Thread.currentThread().interrupt();
         }
+
+        return "";
     }
 }
