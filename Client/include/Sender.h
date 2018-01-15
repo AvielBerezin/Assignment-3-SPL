@@ -7,18 +7,19 @@
 
 class Sender {
 private:
-    ConnectionHandler * _connectionHandler;
-    bool * _shouldTerminate;
-    boost::mutex * _mutex;
+  ConnectionHandler * _connectionHandler;
+  bool * _shouldTerminate;
+  boost::mutex * _mutex;
+
+  std::string getLineFromKeyboard();
+  bool sendMessage(std::string);
 
 public:
-    Sender (ConnectionHandler * connectionHandler, bool * shouldTerminate, boost::mutex* mutex);
+  Sender (ConnectionHandler * connectionHandler,
+    bool * shouldTerminate,
+    boost::mutex * mutex);
 
-    void run();
-
-    std::string getLineFromKeyboard();
-
-    bool trySend(std::string lineMessage);
+  void run();
 };
 
 #endif

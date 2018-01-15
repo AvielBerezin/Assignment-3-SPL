@@ -7,33 +7,25 @@ Receiver::Receiver (ConnectionHandler * connectionHandler,
   _shouldTerminate(shouldTerminate),
   _mutex(mutex) {}
 
-void Receiver::run(){
-    while(!_shouldTerminate) {
-        *_shouldTerminate = !tryReceive();
-    }
+void Receiver::run() {
+  while(!*_shouldTerminate) {
+    *_shouldTerminate = !receiveMessage();
+  }
 }
 
-bool Receiver::tryReceive() {
+bool Receiver::receiveMessage() {
+  std::string response;
+  if (!_connectionHandler->getLine(response)) {
+    std::cout << "Disconnected. Exiting...\n" << std::endl;
+    return false;
+  }
 
-    std::string responseFromServer;
-    if (!_connectionHandler->getLine(responseFromServer)) {
-        boost::mutex::scoped_lock lock(*_mutex);
-        std::cout << "Disconnected. Exiting...\n" << std::endl;
-        return false;
-    }
+  response.resize(response.length() - 1);
+  std::cout << response << std::endl << std::endl;
+  if (response == "ACK signout succeeded") {
+    std::cout << "Exiting...\n" << std::endl;
+    return false;
+  }
 
-    int len = responseFromServer.length();
-    responseFromServer.resize(len-1);
-    {
-        boost::mutex::scoped_lock lock(*_mutex);
-        std::cout << "Reply: " << responseFromServer << " " << len << " bytes " << std::endl << std::endl;
-    }
-
-    if (responseFromServer == "ACK signout") {
-        boost::mutex::scoped_lock lock(*_mutex);
-        std::cout << "Exiting...\n" << std::endl;
-        return false;
-    }
-
-    return true;
+  return true;
 }

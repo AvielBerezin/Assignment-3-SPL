@@ -1,0 +1,4 @@
+"bin/BBclient":
+	path: "bin/BBclient"
+	args: ["127.0.0.1 7777"]
+	cwd: "bin"

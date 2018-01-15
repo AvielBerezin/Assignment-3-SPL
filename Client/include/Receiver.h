@@ -7,17 +7,18 @@
 
 class Receiver{
 private:
-    ConnectionHandler * _connectionHandler;
-    bool * _shouldTerminate;
-    boost::mutex * _mutex;
+  ConnectionHandler * _connectionHandler;
+  bool * _shouldTerminate;
+  boost::mutex * _mutex;
+
+  bool receiveMessage();
+
 public:
-    Receiver (ConnectionHandler * connectionHandler,
-      bool * shouldTerminate,
-      boost::mutex * mutex);
+  Receiver (ConnectionHandler * connectionHandler,
+    bool * shouldTerminate,
+    boost::mutex * mutex);
 
-    void run();
-
-    bool tryReceive();
+  void run();
 
 };
 

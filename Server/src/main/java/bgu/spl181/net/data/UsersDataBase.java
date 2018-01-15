@@ -51,7 +51,7 @@ public class UsersDataBase extends AbstractDataBase<User> {
 
     @Override
     protected String getJsonPath() {
-        return "/users/studs/bsc/2016/avielber/Documents/git/Assignment-3-SPL/DataBase/Users.json";//"../../../../DataBase/Users.json";
+        return "../DataBase/Users.json";
     }
 
     public boolean isFree(User user) {

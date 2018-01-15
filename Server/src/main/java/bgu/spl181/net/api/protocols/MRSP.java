@@ -8,6 +8,8 @@ import bgu.spl181.net.data.users.User;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -16,6 +18,13 @@ import java.util.stream.Collectors;
  * Movie rental service protocol
  */
 public class MRSP extends USTBP {
+
+    private final String textRegex = "[^ \"]+";
+    private final String reachTextRegex = "(\"[^\"]+\")";
+    private final String naturalNumberRegex = "(\\d+)";
+    private final String attributeRegex = reachTextRegex + "|" + textRegex;
+    private final String countriesRegex = "( " + reachTextRegex + ")*";
+
 
     private User user = null;
 
@@ -48,14 +57,21 @@ public class MRSP extends USTBP {
         }
     }
     private boolean tryLogin(String message) {
-        String[] dividedBySpaces = message.split(" ");
-
-        if (dividedBySpaces.length != 3) {
+        if (!message.matches("LOGIN " + textRegex + " " + textRegex)) {
             return false;
         }
+        Matcher matcher = Pattern.compile(textRegex)
+                .matcher(message);
 
-        String username = dividedBySpaces[1];
-        String password = dividedBySpaces[2];
+        if (!matcher.find()) return false;
+        // LOGIN
+
+        if (!matcher.find()) return false;
+        String username = matcher.group();
+
+        if (!matcher.find()) return false;
+        String password = matcher.group();
+
 
         if (userIsLoggedIn()) {
             return false;
@@ -76,7 +92,7 @@ public class MRSP extends USTBP {
     }
 
     /**
-     * message format: REGISTER <username> <password> country="<country name>"</>
+     * message format: REGISTER <username> <password> country="<country name>"
      *
      * @param message the input to the server
      */
@@ -90,43 +106,60 @@ public class MRSP extends USTBP {
         }
     }
     private boolean tryRegister(String message) {
-        String[] divideByQuotationMarks = message.split("\"");
-
-        if (divideByQuotationMarks.length != 2) {
+        if (!message.matches("REGISTER " + textRegex + " " + textRegex + " country=" + reachTextRegex)) {
             return false;
         }
 
-        String registrationFirstPart = divideByQuotationMarks[0];
-        String country = divideByQuotationMarks[1];
+        User registeredUser = generateUser(message);
 
-        String[] divideBySpaces = registrationFirstPart.split(" ");
-
-
-        if (divideBySpaces.length != 4) {
+        if (registeredUser == null) {
             return false;
         }
 
-        if (!divideBySpaces[3].equals("country=")) {
-            return false;
-        }
-
-        String username = divideBySpaces[1];
-        String password = divideBySpaces[2];
-
-        Predicate<User> byUsername = aUser -> aUser.getUsername().equals(username);
+        Predicate<User> byUsername = aUser -> aUser.getUsername().equals(registeredUser.getUsername());
         if (dataBase.users.exists(byUsername)) {
             return false;
         }
 
-        User registeredUser = new User();
-        registeredUser.setUsername(username);
-        registeredUser.setPassword(password);
-        registeredUser.setCountry(country);
-        registeredUser.setMovies(new LinkedList<>());
-        registeredUser.setBalance(0);
-        registeredUser.setType("normal");
 
         return dataBase.users.add(registeredUser) != null;
+    }
+
+    /**
+     * generates user from message
+     * assumes form of message: REGISTER <username> <password> country="<country name>"
+     * @param message a message from client
+     * @return generated user from message
+     */
+    private User generateUser(String message) {
+        Matcher matcher = Pattern.compile(attributeRegex)
+                .matcher(message);
+
+        if (!matcher.find()) return null;
+        // REGISTER
+
+        if (!matcher.find()) return null;
+        String username = matcher.group();
+
+        if (!matcher.find()) return null;
+        String password = matcher.group();
+
+        if (!matcher.find()) return null;
+        // country=
+
+        if (!matcher.find()) return null;
+        String country = matcher.group().replaceAll("\"","");
+
+        User user = new User();
+
+        user.setUsername(username);
+        user.setPassword(password);
+        user.setCountry(country);
+        user.setMovies(new LinkedList<>());
+        user.setBalance(0);
+        user.setType("normal");
+
+        return user;
     }
 
     /**
@@ -144,7 +177,7 @@ public class MRSP extends USTBP {
         }
     }
     private boolean trySignout(String message) {
-        if (message.split(" ").length != 1) {
+        if (!message.matches("SIGNOUT")) {
             return false;
         }
 
@@ -210,33 +243,24 @@ public class MRSP extends USTBP {
      * @param message the input to the server
      */
     private void requestChangePrice(String message) {
-        int amountOfQuotationMarks = count(message, "\"");
-
-        if (amountOfQuotationMarks != 2) {
+        if (!message.matches("REQUEST changeprice " + reachTextRegex + " " + naturalNumberRegex)) {
             reportError("request changeprice failed");
             return;
         }
 
-        String[] divideByQuotationMarks = message.split("\"");
+        Matcher nameMatcher = Pattern.compile(reachTextRegex)
+                .matcher(message);
+        boolean validate = nameMatcher.find(); // for debug
+        String name = nameMatcher.group().replaceAll("\"", "");
 
-//        String REQUEST_changeprice_ = divideByQuotationMarks[0]; // not used
-        String movieName = divideByQuotationMarks[1];
-        String _price_ = divideByQuotationMarks[2];
+        Matcher priceMatcher = Pattern.compile(naturalNumberRegex)
+                .matcher(message);
+        validate = validate & priceMatcher.find();
+        Integer price = Integer.parseInt(priceMatcher.group());
 
-        if (!_price_inCorrectForm(_price_)) {
-            reportError("request addmovie failed");
-            return;
-        }
-        int price = getPriceFrom_price_(_price_);
-
-        Predicate<Movie> byName = aMovie -> aMovie.getName().equals(movieName);
+        Predicate<Movie> byName = aMovie -> aMovie.getName().equals(name);
         Movie movie = dataBase.movies.get(byName);
-        if (movie == null) {
-            reportError("request addmovie failed");
-            return;
-        }
-
-        if (price <= 0) {
+        if (movie == null) { // movie not found
             reportError("request addmovie failed");
             return;
         }
@@ -245,77 +269,34 @@ public class MRSP extends USTBP {
 
         Predicate<Movie> byId = aMovie -> aMovie.getId().equals(movie.getId());
         dataBase.movies.update(movie, byId);
-        acknowledge("addmovie \"" + movieName + "\" success");
-        broadcast("movie \"" + movieName + "\" " + movie.getAvailableAmount() + " " + movie.getPrice());
+        acknowledge("addmovie \"" + name + "\" success");
+        broadcast("movie \"" + name + "\" " + movie.getAvailableAmount() + " " + movie.getPrice());
     }
-
-    private boolean _price_inCorrectForm(String _price_) {
-        int amountOfSpaces = count(_price_, " ");
-        if (amountOfSpaces != 2) {
-            return false;
-        }
-
-        String[] dividedBySpaces = _price_.split(" ");
-        if (!dividedBySpaces[0].equals("")) {
-            return false;
-        }
-        if (!dividedBySpaces[2].equals("")) {
-            return false;
-        }
-
-        try {
-            Integer.parseInt(dividedBySpaces[1]);
-        }
-        catch (Exception e) {
-            return false;
-        }
-
-        return true;
-    }
-
-    private int getPriceFrom_price_(String _price_) {
-        String[] dividedBySpaces = _price_.split(" ");
-        return Integer.parseInt(dividedBySpaces[1]);
-    }
-
     /**
      * message format: REQUEST remmovie <”movie name”>
      *
      * @param message the input to the server
      */
     private void requestRemMovie(String message) {
-        int amountOfQuotationMarks = count(message, "\"");
-
-        if (amountOfQuotationMarks != 2) {
+        if (!message.matches("REQUEST remmovie " + reachTextRegex)) {
             reportError("request remmovie failed");
             return;
         }
 
-        String[] divideByQuotationMarks = message.split("\"");
+        Matcher matcher = Pattern.compile(reachTextRegex)
+                .matcher(message);
+        boolean validate = matcher.find(); // for debug
+        String name = matcher.group().replaceAll("\"", "");
 
-//        String REQUEST_remmovie_ = divideByQuotationMarks[0]; // not used
-        String movieName = divideByQuotationMarks[1];
-
-        if (movieName.equals("")) {
-            reportError("request remmovie failed");
-            return;
-        }
-
-        if (divideByQuotationMarks.length != 2) {
-            reportError("request remmovie failed");
-            return;
-        }
-
-        Predicate<Movie> byName = aMovie -> aMovie.getName().equals(movieName);
+        Predicate<Movie> byName = aMovie -> aMovie.getName().equals(name);
         if (!dataBase.movies.exists(byName)) {
             reportError("request remmovie failed");
             return;
         }
 
-
         dataBase.movies.delete(byName);
-        acknowledge("remmovie \"" + movieName + "\" success");
-        broadcast("movie \"" + movieName + "\" removed");
+        acknowledge("remmovie \"" + name + "\" success");
+        broadcast("movie \"" + name + "\" removed");
     }
 
     /**
@@ -324,133 +305,83 @@ public class MRSP extends USTBP {
      * @param message the input to the server
      */
     private void requestAddMovie(String message) {
-        int amountOfQuotationMarks = count(message, "\"");
+        String messagePattern = "REQUEST addmovie " + reachTextRegex + " " + naturalNumberRegex + " " + naturalNumberRegex + countriesRegex;
 
-        if (amountOfQuotationMarks % 2 != 0) {
+        if (!message.matches(messagePattern)) {
             reportError("request addmovie failed");
             return;
         }
 
-        if (amountOfQuotationMarks == 0) {
-            reportError("request addmovie failed");
-            return;
-        }
+        Movie movie = generateMovie(message);
 
-        String[] divideByQuotationMarks = message.split("\"");
-
-//        String REQUEST_addmovie_ = divideByQuotationMarks[0]; // not used
-        String movieName = divideByQuotationMarks[1];
-        String _amount_price_ = divideByQuotationMarks[2];
-
-        if (!_amount_price_inCorrectForm(_amount_price_)) {
-            reportError("request addmovie failed");
-            return;
-        }
-        int amount = getAmountFrom_amount_price_(_amount_price_);
-        int price = getPriceFrom_amount_price_(_amount_price_);
-
-        if (!bannedCountriesAreInCorrectForm(divideByQuotationMarks)) {
-            reportError("request addmovie failed");
-            return;
-        }
-        List<String> bannedCountries = getBannedCountriesFromRequestAddmovieSplittedString(divideByQuotationMarks);
-
-        Predicate<Movie> byName = aMovie -> aMovie.getName().equals(movieName);
+        Predicate<Movie> byName = aMovie -> aMovie.getName().equals(movie.getName());
         if (dataBase.movies.exists(byName)) {
             reportError("request addmovie failed");
             return;
         }
-
-        if (price <= 0) {
-            reportError("request addmovie failed");
-            return;
-        }
-
-        if (amount <= 0) {
-            reportError("request addmovie failed");
-            return;
-        }
-
-
-        Movie movie = new Movie();
-        movie.setId(dataBase.movies.newId());
-        movie.setName(movieName);
-        movie.setPrice(price);
-        movie.setBannedCountries(bannedCountries);
-        movie.setAvailableAmount(amount);
-        movie.setTotalAmount(amount);
 
         if (dataBase.movies.add(movie) == null) {
             reportError("request addmovie failed");
             return;
         }
 
-        acknowledge("addmovie \"" + movieName + "\" success");
-        broadcast("movie \"" + movieName + "\" " + movie.getAvailableAmount() + " " + movie.getPrice());
+        acknowledge("addmovie \"" + movie.getName() + "\" success");
+        broadcast("movie \"" + movie.getName() + "\" " + movie.getAvailableAmount() + " " + movie.getPrice());
     }
 
-    private boolean _amount_price_inCorrectForm(String _amount_price_) {
-        int amountOfSpaces = count(_amount_price_, " ");
+    /**
+     * generate movie from message
+     * assuming message in the format:
+     * REQUEST addmovie <”movie name”> <amount> <price> [“banned country”,…]
+     * @param message a message from client
+     * @return a movie generated from message
+     */
+    private Movie generateMovie(String message) {
+        Pattern pattern = Pattern.compile(attributeRegex);
+        Matcher matcher = pattern.matcher(message);
 
-        if (amountOfSpaces != 3 & amountOfSpaces != 2) {
-            return false;
-        }
+        String REQUEST;
+        String addmovie;
+        String name;
+        String amount;
+        String price;
+        String bannedCountry;
 
-        String[] dividedBySpaces = _amount_price_.split(" ");
-        try {
-            Integer.parseInt(dividedBySpaces[1]);
-            Integer.parseInt(dividedBySpaces[2]);
-        }
-        catch (Exception e) {
-            return false;
-        }
-
-        if (!dividedBySpaces[0].equals("")) {
-            return false;
-        }
-
-        if (amountOfSpaces == 3 & dividedBySpaces[3].length() != 0) {
-            return false;
-        }
-
-        return true;
-    }
-
-    private int getAmountFrom_amount_price_(String _amount_price_) {
-        String[] dividedBySpaces = _amount_price_.split(" ");
-        return Integer.parseInt(dividedBySpaces[1]);
-    }
-
-    private int getPriceFrom_amount_price_(String _amount_price_) {
-        String[] dividedBySpaces = _amount_price_.split(" ");
-        return Integer.parseInt(dividedBySpaces[2]);
-    }
-
-    private boolean bannedCountriesAreInCorrectForm(String[] divideByQuotationMarks) {
-        for (int i = 3; i < divideByQuotationMarks.length; i += 2) {
-            if (divideByQuotationMarks.length == 0) {
-                return false;
-            }
-        }
-
-        for (int i = 4; i < divideByQuotationMarks.length; i += 2) {
-            if (divideByQuotationMarks[i].trim().length() != 0) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private List<String> getBannedCountriesFromRequestAddmovieSplittedString(String[] divideByQuotationMarks) {
         List<String> bannedCountries = new LinkedList<>();
 
-        for (int i = 3; i < divideByQuotationMarks.length; i += 2) {
-            bannedCountries.add(divideByQuotationMarks[i]);
+        boolean validate; // for debug
+
+        validate = matcher.find();
+        REQUEST = matcher.group();
+
+        validate = validate && matcher.find();
+        addmovie = matcher.group();
+
+        validate = validate && matcher.find();
+        name = matcher.group().replaceAll("\"", "");
+
+        validate = validate && matcher.find();
+        amount = matcher.group();
+
+        validate = validate && matcher.find();
+        price = matcher.group();
+
+        while (matcher.find()) {
+            bannedCountry = matcher.group().replaceAll("\"", "");
+            bannedCountries.add(bannedCountry);
         }
 
-        return bannedCountries;
+        Movie movie = new Movie();
+        movie.setId(dataBase.movies.newId());
+        movie.setName(name);
+        movie.setPrice(Integer.parseInt(price));
+        movie.setBannedCountries(bannedCountries);
+        movie.setAvailableAmount(Integer.parseInt(amount));
+        movie.setTotalAmount(Integer.parseInt(amount));
+
+        return movie;
     }
+
 
     /**
      * message format: REQUEST return <"movie name">
@@ -463,9 +394,7 @@ public class MRSP extends USTBP {
         // TODO how do I keep the latest broadcast correct?
         // TODO how to solve that issue without damaging the concurrency of two users buying and/or returning different unrelated movies???
 
-
-        int amountOfQuotationMarks = count(message, "\"");
-        if (amountOfQuotationMarks != 2) {
+        if (!message.matches("REQUEST return " + reachTextRegex)) {
             reportError("request return failed");
             return;
         }
@@ -478,7 +407,7 @@ public class MRSP extends USTBP {
         Movie movie = dataBase.movies.get(byName);
 
 
-        if (movie == null) {
+        if (movie == null) { // did not find in data base
             reportError("request return failed");
             return;
         }
@@ -520,20 +449,17 @@ public class MRSP extends USTBP {
         // TODO solution: synchronize???
         // TODO how to solve that issue without damaging the concurrency of two users buying and/or returning and/or updating different unrelated movies???
 
-
-        int amountOfQuotationMarks = count(message, "\"");
-        if (amountOfQuotationMarks != 2) {
+        if (!message.matches("REQUEST rent " + reachTextRegex)) {
             reportError("request rent failed");
             return;
         }
 
-        String[] dividedByQuotationMarks = message.split("\"");
-        String movieName = dividedByQuotationMarks[1];
+        String movieName = message.split("\"")[1];
 
         Predicate<Movie> byName = aMovie -> aMovie.getName().equals(movieName);
         Movie movie = dataBase.movies.get(byName);
 
-        if (movie == null) {
+        if (movie == null) { // wasn't found in data base
             reportError("request rent failed");
             return;
         }
@@ -567,6 +493,11 @@ public class MRSP extends USTBP {
 
         user.setBalance(user.getBalance() - movie.getPrice());
 
+        PartialMovie partialMovie = new PartialMovie();
+        partialMovie.setId(movie.getId());
+        partialMovie.setName(movie.getName());
+        user.getMovies().add(partialMovie);
+
         Predicate<Movie> movieById = aMovie -> aMovie.getId().equals(movie.getId());
         Predicate<User> byUsername = aUser -> aUser.getUsername().equals(user.getUsername());
         dataBase.movies.update(movie, movieById);
@@ -582,12 +513,11 @@ public class MRSP extends USTBP {
      * @param message the input to the server
      */
     private void requestInfo(String message) {
-        int amountOfQuotationMarks = count(message, "\"");
-        if (amountOfQuotationMarks == 2) {
-            requestInfoOfMovie(message);
-        }
-        else if (amountOfQuotationMarks == 0) {
+        if (message.matches("REQUEST info")) {
             requestInfoOFAll(message);
+        }
+        else if (message.matches("REQUEST info " + reachTextRegex)) {
+            requestInfoOfMovie(message);
         }
         else {
             reportError("request info failed");
@@ -600,14 +530,13 @@ public class MRSP extends USTBP {
      * @param message the input to the server
      */
     private void requestInfoOFAll(String message) {
-        String[] dividedBySpaces = message.trim().split(" ");
-        if (dividedBySpaces.length != 2) {
-            reportError("request info failed");
-            return;
+        if (message.matches("REQUEST info")) {
+            List<String> moviesNames = dataBase.movies.getAllNames();
+            acknowledge("info" + acknowledgeTextForListOfReachStrings(moviesNames));
         }
-
-        List<String> moviesNames = dataBase.movies.getAllNames();
-        acknowledge("info" + acknowledgeTextForListOfReachStrings(moviesNames));
+        else {
+            reportError("request info failed");
+        }
     }
 
     /**
@@ -616,26 +545,17 @@ public class MRSP extends USTBP {
      * @param message the input to the server
      */
     private void requestInfoOfMovie(String message) {
-        String[] divideByQuotationMarks = message.split("\"");
-
-        if (divideByQuotationMarks.length != 2 &
-                divideByQuotationMarks.length != 3) {
+        if (!message.matches("REQUEST info " + reachTextRegex)) {
             reportError("request info failed");
             return;
         }
 
-        if (divideByQuotationMarks.length == 3 &&
-                divideByQuotationMarks[2].trim().length() != 0) {
-            reportError("request info failed");
-            return;
-        }
-
-        String movieName = divideByQuotationMarks[1];
+        String movieName = message.split("\"")[1];
 
         Predicate<Movie> byName = aMovie -> aMovie.getName().equals(movieName);
         Movie movie = dataBase.movies.get(byName);
 
-        if (movie == null) {
+        if (movie == null) { // wasn't found in the data base
             reportError("request info failed");
             return;
         }
@@ -643,7 +563,7 @@ public class MRSP extends USTBP {
 
         List<String> bannedCountries = movie.getBannedCountries();
         acknowledge("info \"" + movie.getName() + "\" " +
-                movie.getAvailableAmount() + " " + // TODO do i send the number of available copies or the number of total copies?
+                movie.getAvailableAmount() + " " +
                 movie.getPrice() +
                 acknowledgeTextForListOfReachStrings(bannedCountries));
     }
@@ -655,16 +575,6 @@ public class MRSP extends USTBP {
         }
 
         return result;
-    }
-
-    private int count(String string, String counted) {
-        int count = 0;
-        int start = 0;
-        while ((start = string.indexOf(counted, start)) != -1) {
-            count++;
-            start++;
-        }
-        return count;
     }
 
     /**
@@ -694,7 +604,7 @@ public class MRSP extends USTBP {
      * @param message the input to the server
      */
     private void requestBalanceAdd(String message) {
-        if (canRequestBalanceAdd(message)) {
+        if (message.matches("REQUEST balance add " + naturalNumberRegex)) {
             int amount = getAmountOfBalanceAddRequest(message);
             user.setBalance(user.getBalance() + amount);
             Predicate<User> byUsername = aUser -> aUser.getUsername().equals(user.getUsername());
@@ -706,20 +616,12 @@ public class MRSP extends USTBP {
         }
     }
 
-    private boolean canRequestBalanceAdd(String message) {
-        if (message.split(" ").length != 4) {
-            return false;
-        }
-
-        try {
-            Integer.parseInt(message.split(" ")[3]);
-            return true;
-        }
-        catch (Exception e) {
-            return false;
-        }
-    }
-
+    /**
+     * gets amount from message
+     * assumes message is in format: REQUEST balance add <amount>
+     * @param message message from client
+     * @return amount from message
+     */
     private int getAmountOfBalanceAddRequest(String message) {
         return Integer.parseInt(message.split(" ")[3]);
     }
@@ -730,23 +632,17 @@ public class MRSP extends USTBP {
      * @param message the input to the server
      */
     private void requestBalanceInfo(String message) {
-        if (canRequestBalanceInfo(message)) {
-            acknowledge("balance " + user.getBalance());
-        }
-        else {
+        if (!message.matches("REQUEST balance info")) {
             reportError("request balance failed");
-        }
-    }
-    private boolean canRequestBalanceInfo(String message) {
-        if (message.split(" ").length != 3) {
-            return false;
+            return;
         }
 
         if (!userIsLoggedIn()) {
-            return false;
+            reportError("request balance failed");
+            return;
         }
 
-        return true;
+        acknowledge("balance " + user.getBalance());
     }
 
     private String getBalanceRequestType(String message) {
@@ -765,12 +661,13 @@ public class MRSP extends USTBP {
      * @param message the input to the server
      */
     private String getRequestName(String message) {
-        String[] dividedBySpaces = message.split(" ");
+        Matcher matcher = Pattern.compile(textRegex)
+                .matcher(message);
 
-        if (dividedBySpaces.length < 2) {
-            return "";
+        if (matcher.find() && matcher.find()) {
+            return matcher.group();
         }
 
-        return dividedBySpaces[1];
+        return "";
     }
 }

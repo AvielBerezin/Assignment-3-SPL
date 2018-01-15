@@ -20,7 +20,7 @@ public class MoviesDataBase extends AbstractDataBase<Movie> {
 
     @Override
     protected String getJsonPath() {
-        return "/users/studs/bsc/2016/avielber/Documents/git/Assignment-3-SPL/DataBase/Movies.json";//../../../../DataBase/Movies.json";
+        return "../DataBase/Movies.json";
     }
 
     public List<String> getAllNames() {
